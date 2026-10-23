@@ -343,7 +343,7 @@ PY
 
 Windows 11 使用独立目录 windows11、共享 netboot-win11、菜单 win11。
 保留 LTSC 原目录和入口，不覆盖它的 boot.wim 或 install.wim。
-本节是接入说明，尚未对当前服务执行这些修改。
+当前已完成 Windows 11 安装源、共享、启动脚本和菜单接入。客户端已进入过安装程序；尚未完成整机安装验收。已有环境不要重复添加菜单和共享。
 
 ### 7.2 等待传输结束并检查镜像
 
@@ -385,7 +385,7 @@ install.wim、install.esd、install.swm 属于不同形式：
 
 ### 7.4 新增独立共享
 
-在 config/smb.conf 末尾添加一次：
+当前配置快照已含 [netboot-win11]，不要重复添加；仅旧配置缺少时追加：
 
 ~~~ini
 [netboot-win11]
@@ -400,48 +400,30 @@ hosts deny = ALL
 沿用当前受信 LAN/VPN 的 guest 共享方案。如果 WinPE 客户端策略拒绝 guest，
 需要配置专用只读账号和相应客户端连接方式，不要把密码写到公开仓库。
 
-### 7.5 生成 WinPE 启动脚本
+### 7.5 安装自动连接与重试脚本
 
-在 Bash 运行以下 Python，生成 CRLF 格式文件：
+在本仓库根目录执行：
 
 ~~~bash
-python3 - <<'PY'
-from pathlib import Path
-root = Path("/home/javen03/data/netboot/http/windows11")
-cmd = r"""@echo off
-wpeinit
-net use Z: \\192.168.10.220\netboot-win11 /user:netboot-guest ""
-if errorlevel 1 goto network_failed
-set "INSTALL_IMAGE="
-if exist Z:\sources\install.esd set "INSTALL_IMAGE=Z:\sources\install.esd"
-if exist Z:\sources\install.wim set "INSTALL_IMAGE=Z:\sources\install.wim"
-if not defined INSTALL_IMAGE goto source_failed
-if not exist X:\sources\setup.exe goto setup_missing
-X:\sources\setup.exe /InstallFrom:%INSTALL_IMAGE%
-echo Setup exit code: %errorlevel%
-goto shell
-:network_failed
-echo Cannot map installation share.
-ipconfig
-net use
-goto shell
-:source_failed
-echo Missing install.wim or install.esd. Check ISO and share.
-dir Z:\sources\install.*
-goto shell
-:setup_missing
-echo Native setup missing. Check boot.wim Setup index.
-:shell
-echo Logs: X:\Windows\Panther and X:\$WINDOWS.~BT\Sources\Panther
-cmd.exe
-"""
-ini = r"""[LaunchApps]
-"%SYSTEMROOT%\System32\cmd.exe", "/c X:\Windows\System32\netboot.cmd"
-"""
-for name, data in (("netboot.cmd", cmd), ("winpeshl.ini", ini)):
-    (root / name).write_bytes(data.replace("\n", "\r\n").encode("ascii"))
-PY
+cp examples/windows11/netboot.cmd examples/windows11/winpeshl.ini "$NETBOOT_ROOT/http/windows11/"
 ~~~
+
+脚本见 [netboot.cmd](examples/windows11/netboot.cmd)，启动入口见 [winpeshl.ini](examples/windows11/winpeshl.ini)。
+
+1. 执行 wpeinit 初始化网络。
+2. 自动映射 Z: 到 Windows 11 安装共享。
+3. 映射失败或 install.wim 不可读时，等待约 5 秒再试，最多尝试 12 次。
+4. 若 Z: 已连接同一个共享，使用现有映射检查安装源。
+5. 安装源可读后，自动运行本机 WinPE 的 Setup，使用共享中的 install.wim。
+6. 重试上限耗尽后显示 IP、共享状态并保留命令行。
+
+总等待时间还包含每次 net use 的连接超时，并非固定 60 秒。
+当前脚本针对 install.wim；使用只有 install.esd 的其他镜像时，
+必须同时修改脚本中的存在性检查和 /installfrom 路径。分卷 SWM 不适用此脚本。
+
+脚本自动连接安装源，不会自动选择磁盘、分区或格式化。
+重新 PXE 启动才能加载更新后的脚本；已运行的 WinPE 使用内存中的旧版本。
+已核对 HTTP 返回内容和 CRLF 格式，客户端自动重试后的完整安装仍待验收。
 
 ### 7.6 权限与配置检查
 
@@ -459,7 +441,7 @@ smbclient //192.168.10.220/netboot-win11 -U 'netboot-guest%'   -c 'ls; cd source
 
 ### 7.7 修改 iPXE 菜单
 
-编辑 http/boot.ipxe，在 choose 之前的 item 列表中添加：
+当前菜单快照已包含此入口；仅迁移到旧菜单时，在 choose 之前添加：
 
 ~~~ipxe
 item win11 Windows 11 24H2 x64
@@ -470,6 +452,7 @@ item win11 Windows 11 24H2 x64
 ~~~ipxe
 :win11
 kernel ${base}/boot/wimboot index=2 || goto failed
+initrd ${base}/windows11/bootmgr bootmgr || goto failed
 initrd ${base}/windows11/winpeshl.ini winpeshl.ini || goto failed
 initrd ${base}/windows11/netboot.cmd netboot.cmd || goto failed
 initrd ${base}/windows11/sources/boot.wim boot.wim || goto failed
@@ -556,6 +539,14 @@ sudo tail -f /var/log/netboot/access.log
 RDP 登录是系统安装后另一条链路；它不能证明 PXE DHCP、TFTP 或安装源是否可用。
 按账户状态、密码、NLA、系统日志排查，避免通过改 PXE 配置解决远程桌面登录。
 
+### 9.6 错误 53 与自动重试
+
+用户反馈手动连接可用后，已为 Windows 11 加入自动重试。
+这用于处理临时连接失败，根因尚未通过客户端日志最终确定。
+若仍失败，需要核查 WinPE 到服务器的 TCP 445 连通性和 SMB 认证策略；
+正常 Windows 的连接测试不能代替 WinPE 环境测试。
+重试不会修复永久路由阻断、缺失驱动或访客认证策略冲突。
+
 ## 10. 日常维护、升级与回滚
 
 ~~~bash
@@ -602,6 +593,7 @@ sudo systemctl stop netboot-http netboot-tftp netboot-smb
 
 config/ 和 systemd/ 是现有环境配置快照；
 examples/ 是现有菜单与 Windows 启动脚本。
-手册中的 Windows 11 是新增步骤，尚未包含在当前菜单快照中。
+当前菜单已包含 Windows 11；examples/windows11/ 是已部署的自动重试脚本。
+原 examples/netboot.cmd 对应 LTSC，不要混用。
 本仓库只保存文本配置和说明，不保存安装镜像、账号密码或激活密钥。
 
