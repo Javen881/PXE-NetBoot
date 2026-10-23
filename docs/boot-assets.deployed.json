@@ -1,0 +1,30 @@
+{
+  "tftp/undionly.kpxe": {
+    "bytes": 106016,
+    "sha256": "ac49e5d3a16a0ac6bf9e5781c8ca2be3d7a58f0efd44f37f4d13a2a665fd06e7"
+  },
+  "tftp/ipxe.efi": {
+    "bytes": 995840,
+    "sha256": "a44ca2737f3c534be9635d828b94035871ba5e3d777d41a6e86e3a5f099c7e5d"
+  },
+  "tftp/snponly.efi": {
+    "bytes": 282624,
+    "sha256": "28204390433bf9d30448cd7aa3b0b356838411c2e70e2624c9bf08f1841faef1"
+  },
+  "tftp/boot.ipxe": {
+    "bytes": 63,
+    "sha256": "2e33859962981740275972e280f42908bc9f975830745ecd33e2033dfa3f858a"
+  },
+  "http/boot/ipxe.iso": {
+    "bytes": 9437184,
+    "sha256": "db063f10275f33fe02f1a5d652509445fd25f16163de5e0f290f133c36e80ca6"
+  },
+  "http/boot/ipxe.efi": {
+    "bytes": 995840,
+    "sha256": "a44ca2737f3c534be9635d828b94035871ba5e3d777d41a6e86e3a5f099c7e5d"
+  },
+  "http/boot/wimboot": {
+    "bytes": 76064,
+    "sha256": "5f067ccdc4d084d5bf77b6c853bd0f8402dfc2b4cd1b103d358993ae97fae8e3"
+  }
+}

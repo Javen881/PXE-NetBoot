@@ -1,0 +1,7 @@
+{
+  "ubuntu": "ubuntu-26.04.1-desktop-amd64.iso",
+  "windows": "SW_DVD9_WIN_ENT_LTSC_2021_64BIT_ChnSimp_MLF_X22-84402.ISO",
+  "windows11": "Win11_24H2_Pro_Chinese_Simplified_x64.iso",
+  "pe": "Full.iso",
+  "esxi": "DellEMC-ESXi-6.7U3-17700523-A11-customized.iso"
+}

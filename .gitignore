@@ -5,3 +5,7 @@
 *.swm
 *.key
 .env
+__pycache__/
+*.pyc
+.agents/
+.codex/

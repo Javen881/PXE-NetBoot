@@ -1,0 +1,9 @@
+# Replace TEST_MAC with the test machine's wired MAC before including this file.
+dhcp-host=TEST_MAC,set:pxetest
+dhcp-userclass=set:ipxe,iPXE
+dhcp-match=set:bios,option:client-arch,0
+dhcp-match=set:efi64,option:client-arch,7
+dhcp-match=set:efi64,option:client-arch,9
+dhcp-boot=tag:pxetest,tag:ipxe,http://192.168.10.220:8088/boot.ipxe
+dhcp-boot=tag:pxetest,tag:!ipxe,tag:bios,undionly.kpxe,,192.168.10.220
+dhcp-boot=tag:pxetest,tag:!ipxe,tag:efi64,ipxe.efi,,192.168.10.220
