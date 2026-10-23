@@ -7,6 +7,7 @@ item windows Windows Enterprise LTSC 2021 x64 - LAN or site VPN
 item pe10 STBOOT PE10 - maintenance (compatibility test)
 item pe8 STBOOT PE8 x86 - Legacy BIOS only
 item esxi DellEMC ESXi 6.7 U3 - hardware compatibility required
+item win11 Windows 11 24H2 x64 - LAN or site VPN
 item shell iPXE shell
 item local Exit to firmware
 choose --default local --timeout 30000 target || goto local
@@ -46,6 +47,13 @@ chain ${base}/esxi/mboot.c32 -c ${base}/esxi/boot.cfg || goto failed
 echo PE8 is 32-bit. Use Legacy BIOS or choose PE10.
 prompt Press a key to return
 goto menu
+:win11
+kernel ${base}/boot/wimboot index=2 || goto failed
+initrd ${base}/windows11/bootmgr bootmgr || goto failed
+initrd ${base}/windows11/winpeshl.ini winpeshl.ini || goto failed
+initrd ${base}/windows11/netboot.cmd netboot.cmd || goto failed
+initrd ${base}/windows11/sources/boot.wim boot.wim || goto failed
+boot || goto failed
 :shell
 shell
 goto menu
