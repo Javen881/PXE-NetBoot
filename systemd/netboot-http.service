@@ -1,0 +1,16 @@
+[Unit]
+Description=NetBoot HTTP on port 8088
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+User=javen03
+Group=javen03
+RuntimeDirectory=netboot-http
+LogsDirectory=netboot
+ExecStart=/usr/sbin/nginx -c /home/javen03/data/netboot/config/nginx.conf -g "daemon off;"
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target
