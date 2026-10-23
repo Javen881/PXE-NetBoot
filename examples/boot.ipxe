@@ -1,0 +1,57 @@
+#!ipxe
+set base http://192.168.10.220:8088
+:menu
+menu NetBoot - local installation media
+item ubuntu Ubuntu Desktop 26.04.1 amd64
+item windows Windows Enterprise LTSC 2021 x64 - LAN or site VPN
+item pe10 STBOOT PE10 - maintenance (compatibility test)
+item pe8 STBOOT PE8 x86 - Legacy BIOS only
+item esxi DellEMC ESXi 6.7 U3 - hardware compatibility required
+item shell iPXE shell
+item local Exit to firmware
+choose --default local --timeout 30000 target || goto local
+imgfree
+goto ${target}
+:ubuntu
+kernel ${base}/ubuntu/vmlinuz initrd=initrd.magic boot=casper ip=dhcp url=${base}/iso/ubuntu.iso cloud-init=disabled --- || goto failed
+initrd --name initrd ${base}/ubuntu/initrd || goto failed
+boot || goto failed
+:windows
+kernel ${base}/boot/wimboot index=2 || goto failed
+initrd ${base}/windows/bootmgr bootmgr || goto failed
+initrd ${base}/windows/winpeshl.ini winpeshl.ini || goto failed
+initrd ${base}/windows/netboot.cmd netboot.cmd || goto failed
+initrd ${base}/windows/sources/boot.wim boot.wim || goto failed
+boot || goto failed
+:pe10
+set pe pe10.wim
+goto pe
+:pe8
+iseq ${platform} pcbios || goto pe8_unsupported
+set pe pe8.wim
+:pe
+kernel ${base}/boot/wimboot || goto failed
+initrd ${base}/windows/bootmgr bootmgr || goto failed
+initrd ${base}/windows/boot/bcd BCD || goto failed
+initrd ${base}/pe/boot.sdi boot.sdi || goto failed
+initrd ${base}/pe/${pe} boot.wim || goto failed
+boot || goto failed
+:esxi
+iseq ${platform} efi && goto esxi_efi || goto esxi_bios
+:esxi_efi
+chain ${base}/esxi/efi/boot/bootx64.efi -c ${base}/esxi/boot.cfg || goto failed
+:esxi_bios
+chain ${base}/esxi/mboot.c32 -c ${base}/esxi/boot.cfg || goto failed
+:pe8_unsupported
+echo PE8 is 32-bit. Use Legacy BIOS or choose PE10.
+prompt Press a key to return
+goto menu
+:shell
+shell
+goto menu
+:failed
+echo Boot failed. Check server access log, network and firmware compatibility.
+prompt Press a key to return to the menu
+goto menu
+:local
+exit
