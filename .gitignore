@@ -1,0 +1,7 @@
+*.iso
+*.ISO
+*.wim
+*.esd
+*.swm
+*.key
+.env
