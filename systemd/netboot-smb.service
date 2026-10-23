@@ -1,0 +1,13 @@
+[Unit]
+Description=NetBoot LAN-only read-only Windows installation source
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+RuntimeDirectory=netboot-smb
+StateDirectory=netboot-smb
+CacheDirectory=netboot-smb
+ExecStart=/usr/sbin/smbd --foreground --no-process-group --configfile=/home/javen03/data/netboot/config/smb.conf
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
