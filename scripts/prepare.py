@@ -44,7 +44,15 @@ def main():
         for f in ('netboot.cmd','winpeshl.ini'):
             data=(source/f).read_text().replace('\r\n','\n')
             (web/key/f).write_bytes(data.replace('\n','\r\n').encode('ascii'))
-    for member,dst in [('modules/PE10.WIM','pe10.wim'),('modules/PE8.WIM','pe8.wim'),('boot/BOOT.SDI','boot.sdi')]:
+    for member,dst in [
+        ('modules/PE10.WIM','pe10.wim'),
+        ('modules/PE8.WIM','pe8.wim'),
+        ('boot/BOOT.SDI','boot.sdi'),
+        ('bootmgr','bootmgr'),
+        ('boot/BCD','bcd'),
+        ('efi/boot/msbootx64.efi','bootmgfw.efi'),
+        ('efi/microsoft/boot/bcd','bcd-efi'),
+    ]:
         extract('pe',member,web/'pe'/dst)
     run('bsdtar','-xf',iso/media['esxi'],'-C',web/'esxi','--no-same-owner')
     for path in sorted((web/'esxi').rglob('*'),key=lambda p:len(p.parts),reverse=True):
@@ -89,4 +97,3 @@ def main():
     print('Prepared:',root)
     print('Services were not installed. See docs/DEMO.md before activation.')
 if __name__=='__main__': main()
-

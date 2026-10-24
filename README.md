@@ -474,6 +474,8 @@ boot || goto failed
 item 后的 win11 必须与 :win11 完全一致。
 `bootmgr` 只用于 Legacy BIOS；UEFI 必须把 ISO 根目录的 `bootmgr.efi` 以目标名
 `bootmgfw.efi` 传给 wimboot，否则会出现 `FATAL: no bootloader file found`。
+自定义 PE 应使用其原始 ISO 中同版本的 `bootmgr`、EFI 启动器、BCD 和 `boot.sdi`；不要把较新的 Windows
+安装 ISO 启动组件与旧版 PE WIM 混用。本项目的 `prepare.py` 会从 `Full.iso` 将这些文件提取到 `http/pe/`。
 这里只修改静态菜单，无需重启 nginx、TFTP 或路由器。
 如果同时修改了首页 index.html，可更新显示列表，但首页不是实际引导菜单。
 
