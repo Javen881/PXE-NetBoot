@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -104,20 +105,37 @@ func main() {
 		logger.Fatalf("bind UDP/67: %v (run as Administrator and stop other DHCP services)", err)
 	}
 	defer conn.Close()
-	pc := ipv4.NewPacketConn(conn)
-	if err := pc.SetControlMessage(ipv4.FlagInterface, true); err != nil {
-		logger.Fatalf("enable interface filtering: %v", err)
+	var pc *ipv4.PacketConn
+	if runtime.GOOS == "windows" {
+		if err := setOutgoingInterface(conn, iface.Index); err != nil {
+			logger.Fatalf("select outgoing interface: %v", err)
+		}
+		logger.Printf("Windows UDP mode: outbound interface=%s index=%d", iface.Name, iface.Index)
+	} else {
+		pc = ipv4.NewPacketConn(conn)
+		if err := pc.SetControlMessage(ipv4.FlagInterface, true); err != nil {
+			logger.Fatalf("enable interface filtering: %v", err)
+		}
 	}
 	logger.Printf("started interface=%s index=%d server=%s pool=%s-%s", iface.Name, iface.Index, cfg.ServerIP, cfg.PoolStart, cfg.PoolEnd)
 
 	buf := make([]byte, 1600)
 	for {
-		n, cm, src, err := pc.ReadFrom(buf)
+		var n int
+		var src net.Addr
+		var cm *ipv4.ControlMessage
+		if runtime.GOOS == "windows" {
+			var udpSrc *net.UDPAddr
+			n, udpSrc, err = conn.ReadFromUDP(buf)
+			src = udpSrc
+		} else {
+			n, cm, src, err = pc.ReadFrom(buf)
+		}
 		if err != nil {
 			logger.Printf("read: %v", err)
 			continue
 		}
-		if cm == nil || cm.IfIndex != iface.Index {
+		if runtime.GOOS != "windows" && (cm == nil || cm.IfIndex != iface.Index) {
 			continue
 		}
 		p, err := parsePacket(buf[:n])
@@ -137,8 +155,14 @@ func main() {
 		if p.giaddr.To4() != nil && !p.giaddr.IsUnspecified() {
 			dst = &net.UDPAddr{IP: p.giaddr, Port: 67}
 		}
-		if _, err := pc.WriteTo(reply, &ipv4.ControlMessage{IfIndex: iface.Index}, dst); err != nil {
-			logger.Printf("send %s: %v", summary, err)
+		var sendErr error
+		if runtime.GOOS == "windows" {
+			_, sendErr = conn.WriteToUDP(reply, dst)
+		} else {
+			_, sendErr = pc.WriteTo(reply, &ipv4.ControlMessage{IfIndex: iface.Index}, dst)
+		}
+		if sendErr != nil {
+			logger.Printf("send %s: %v", summary, sendErr)
 		} else {
 			logger.Print(summary)
 		}

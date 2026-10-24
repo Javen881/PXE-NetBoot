@@ -38,6 +38,9 @@ GUI 和命令行共用同一个 `config.json` 和 DHCP 引擎。GUI 包不内置
 `config.json` 是外部文件，修改参数不需要重新编译。租约写到 `data/leases.json`，运行日志写到
 `logs/server.log`。程序按接口名称查找 Windows 网卡，确认它确实拥有 `serverIP`，并使用收到报文的接口索引过滤请求和发送响应，避免响应 VPN 或 Wi-Fi 上的 DHCP 请求。
 
+Windows 的 Go 网络库不提供 DHCP 报文的入站接口元数据，因此 Windows 版本在 UDP 67 上接收请求，并用系统
+`IP_UNICAST_IF` 选项把响应固定从所选 LAN 网卡发出。请保持现场 LAN 隔离，并确认其他网卡所在网络没有 PXE 客户端。
+
 ## 配置检查
 
 ```bat
