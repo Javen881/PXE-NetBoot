@@ -4,6 +4,10 @@
 > 当前已部署基础服务并验证资源传输；不能据此认定 Windows、Ubuntu、PE、ESXi 已完整安装成功。
 > 新增 Windows 11 的步骤在第 7 节。本仓库不分发 ISO、WIM、许可证或账户密码。
 
+## 新增其他系统
+
+- [新增 Windows 10、Windows 11 与 Linux：逐步操作指南](docs/ADDING-SYSTEMS.md)：独立版本目录、共享、菜单、Ubuntu/Debian/Rocky 类安装源、验证和回滚。
+
 ## 完整部署 Demo 与源码
 
 本仓库已补齐脚本、网页、TFTP 入口、路由器规则和历史实现。
