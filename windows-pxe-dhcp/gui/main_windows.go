@@ -47,6 +47,7 @@ var (
 	startButton, stopButton, saveButton, checkButton           *walk.PushButton
 	process                                                    *exec.Cmd
 	processMu                                                  sync.Mutex
+	interfaceOptions                                           []string
 )
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 			fatalGUI(fmt.Errorf("程序异常：%v", recovered))
 		}
 	}()
-	interfaces := interfaceNames()
+	interfaceOptions = interfaceNames()
 	err := MainWindow{
 		AssignTo: &mw,
 		Title:    "Windows PXE DHCP 管理器",
@@ -64,7 +65,7 @@ func main() {
 		Layout:   VBox{MarginsZero: false},
 		Children: []Widget{
 			GroupBox{Title: "现场 LAN 与 DHCP 地址池", Layout: Grid{Columns: 4}, Children: []Widget{
-				Label{Text: "监听网卡"}, ComboBox{AssignTo: &adapter, Model: interfaces},
+				Label{Text: "监听网卡"}, ComboBox{AssignTo: &adapter, Model: interfaceOptions},
 				Label{Text: "本机 LAN 地址"}, LineEdit{AssignTo: &serverIP},
 				Label{Text: "子网掩码"}, LineEdit{AssignTo: &mask},
 				Label{Text: "默认网关"}, LineEdit{AssignTo: &router},
@@ -149,9 +150,8 @@ func loadIntoForm() error {
 
 func setForm(c Config) {
 	adapter.SetCurrentIndex(-1)
-	for i := 0; i < adapter.Model().(walk.ListModel).ItemCount(); i++ {
-		v := adapter.Model().(walk.ListModel).Value(i)
-		if fmt.Sprint(v) == c.ListenInterface {
+	for i, name := range interfaceOptions {
+		if name == c.ListenInterface {
 			adapter.SetCurrentIndex(i)
 			break
 		}
