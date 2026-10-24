@@ -16,13 +16,15 @@
 
 ### GUI（推荐）
 
-1. 解压 ZIP，右键 `windows-pxe-dhcp-gui.exe`，选择“以管理员身份运行”。
+1. 解压 ZIP，双击 `windows-pxe-dhcp-gui.exe` 并允许 UAC 管理员权限。程序已内置管理员清单。
 2. 在窗口中选择现场 LAN 网卡，修改地址池、DNS、TFTP、BIOS/UEFI 启动文件和 iPXE 菜单地址。
 3. 点击“保存配置”，程序会在 EXE 同目录生成 `config.json`；以后修改参数不需要重新编译。
 4. 点击“检查配置”，通过后点击“启动 DHCP”。运行日志会实时显示在窗口中。
 5. 装机完成后点击“停止”。服务运行期间配置按钮会锁定，避免界面参数与实际下发参数不一致。
 
 GUI 和命令行共用同一个 `config.json` 和 DHCP 引擎。GUI 包不内置镜像、TFTP 或 HTTP 文件。
+如果 GUI 初始化失败，会在程序目录生成 `gui-crash.log` 并显示具体原因。若 Windows 阻止从 GitHub 下载的文件，先右键 ZIP，
+在“属性”中选择“解除锁定”，然后重新解压。
 
 ### 命令行
 

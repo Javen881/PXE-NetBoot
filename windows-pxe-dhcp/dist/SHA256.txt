@@ -1,2 +1,2 @@
 f5e942b0fdd7586bbda65fe7988f4cf51fa865033f945d37e36b272437300069  windows-pxe-dhcp.exe
-009d79a7ca6eda9cb668f6b2c607a914e1c835790dc675adc950f451b7bcd5b4  windows-pxe-dhcp-gui.exe
+df265c6a75de6a2cc92aeaadf9f0e5c26b51231a035207a98a7cf415b02939ea  windows-pxe-dhcp-gui.exe

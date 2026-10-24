@@ -50,8 +50,13 @@ var (
 )
 
 func main() {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			fatalGUI(fmt.Errorf("程序异常：%v", recovered))
+		}
+	}()
 	interfaces := interfaceNames()
-	MainWindow{
+	err := MainWindow{
 		AssignTo: &mw,
 		Title:    "Windows PXE DHCP 管理器",
 		MinSize:  Size{Width: 820, Height: 680},
@@ -96,6 +101,10 @@ func main() {
 			Label{AssignTo: &statusLabel, Text: "状态：未启动"},
 		},
 	}.Create()
+	if err != nil {
+		fatalGUI(fmt.Errorf("创建窗口失败：%w", err))
+		return
+	}
 
 	mw.Closing().Attach(func(canceled *bool, reason walk.CloseReason) { stopServer() })
 	if err := loadIntoForm(); err != nil {
@@ -303,6 +312,17 @@ func appendLog(s string) {
 func showError(err error) {
 	appendLog(err.Error())
 	walk.MsgBox(mw, "错误", err.Error(), walk.MsgBoxIconError)
+}
+
+func fatalGUI(err error) {
+	path := filepath.Join(executableDir(), "gui-crash.log")
+	message := time.Now().Format(time.RFC3339) + "  " + err.Error() + "\r\n"
+	file, openErr := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if openErr == nil {
+		_, _ = file.WriteString(message)
+		_ = file.Close()
+	}
+	walk.MsgBox(nil, "Windows PXE DHCP 启动失败", err.Error()+"\n\n错误日志："+path, walk.MsgBoxIconError)
 }
 func openDirectory() { _ = exec.Command("explorer.exe", executableDir()).Start() }
 func installFirewall() {
