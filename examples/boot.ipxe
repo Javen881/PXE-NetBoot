@@ -32,8 +32,16 @@ iseq ${platform} pcbios || goto pe8_unsupported
 set pe pe8.wim
 :pe
 kernel ${base}/boot/wimboot || goto failed
-iseq ${platform} efi && initrd ${base}/pe/bootmgfw.efi bootx64.efi || initrd ${base}/pe/bootmgr bootmgr || goto failed
-iseq ${platform} efi && initrd ${base}/pe/bcd-efi BCD || initrd ${base}/pe/bcd BCD || goto failed
+iseq ${platform} efi && goto pe_efi || goto pe_bios
+:pe_efi
+initrd ${base}/pe/bootmgfw.efi bootx64.efi || goto failed
+initrd ${base}/pe/bcd-efi BCD || goto failed
+initrd ${base}/pe/bcd-efi EFI/Microsoft/Boot/BCD || goto failed
+goto pe_common
+:pe_bios
+initrd ${base}/pe/bootmgr bootmgr || goto failed
+initrd ${base}/pe/bcd BCD || goto failed
+:pe_common
 initrd ${base}/pe/boot.sdi boot.sdi || goto failed
 initrd ${base}/pe/${pe} boot.wim || goto failed
 boot || goto failed

@@ -478,6 +478,8 @@ item 后的 win11 必须与 :win11 完全一致。
 安装 ISO 启动组件与旧版 PE WIM 混用。本项目的 `prepare.py` 会从 `Full.iso` 将这些文件提取到 `http/pe/`。
 手工向 wimboot 注入 UEFI 启动器时，iPXE 的目标文件名使用官方示例中的 `bootx64.efi`；源文件仍可命名为
 `bootmgfw.efi`。
+此定制 PE 的 EFI Boot Manager 固定查找 `\EFI\Microsoft\Boot\BCD`，所以菜单除标准 `BCD` 名称外还提供该
+完整路径别名；否则 Boot Manager 会显示状态 `0xc000000f`。
 这里只修改静态菜单，无需重启 nginx、TFTP 或路由器。
 如果同时修改了首页 index.html，可更新显示列表，但首页不是实际引导菜单。
 
