@@ -464,7 +464,7 @@ item win11 Windows 11 24H2 x64
 ~~~ipxe
 :win11
 kernel ${base}/boot/wimboot index=2 || goto failed
-initrd ${base}/windows11/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/windows11/bootmgr.efi bootmgfw.efi || initrd ${base}/windows11/bootmgr bootmgr || goto failed
 initrd ${base}/windows11/winpeshl.ini winpeshl.ini || goto failed
 initrd ${base}/windows11/netboot.cmd netboot.cmd || goto failed
 initrd ${base}/windows11/sources/boot.wim boot.wim || goto failed
@@ -472,6 +472,8 @@ boot || goto failed
 ~~~
 
 item 后的 win11 必须与 :win11 完全一致。
+`bootmgr` 只用于 Legacy BIOS；UEFI 必须把 ISO 根目录的 `bootmgr.efi` 以目标名
+`bootmgfw.efi` 传给 wimboot，否则会出现 `FATAL: no bootloader file found`。
 这里只修改静态菜单，无需重启 nginx、TFTP 或路由器。
 如果同时修改了首页 index.html，可更新显示列表，但首页不是实际引导菜单。
 

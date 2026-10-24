@@ -108,7 +108,7 @@ initrd --name initrd ${base}/ubuntu/initrd || goto failed
 boot || goto failed
 :windows
 kernel ${base}/boot/wimboot index=2 || goto failed
-initrd ${base}/windows/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/windows/bootmgr.efi bootmgfw.efi || initrd ${base}/windows/bootmgr bootmgr || goto failed
 initrd ${base}/windows/winpeshl.ini winpeshl.ini || goto failed
 initrd ${base}/windows/netboot.cmd netboot.cmd || goto failed
 initrd ${base}/windows/sources/boot.wim boot.wim || goto failed
@@ -121,8 +121,8 @@ iseq ${platform} pcbios || goto pe8_unsupported
 set pe pe8.wim
 :pe
 kernel ${base}/boot/wimboot || goto failed
-initrd ${base}/windows/bootmgr bootmgr || goto failed
-initrd ${base}/windows/boot/bcd BCD || goto failed
+iseq ${platform} efi && initrd ${base}/windows/bootmgr.efi bootmgfw.efi || initrd ${base}/windows/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/windows/efi/microsoft/boot/bcd BCD || initrd ${base}/windows/boot/bcd BCD || goto failed
 initrd ${base}/pe/boot.sdi boot.sdi || goto failed
 initrd ${base}/pe/${pe} boot.wim || goto failed
 boot || goto failed
@@ -138,7 +138,7 @@ prompt Press a key to return
 goto menu
 :win11
 kernel ${base}/boot/wimboot index=2 || goto failed
-initrd ${base}/windows11/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/windows11/bootmgr.efi bootmgfw.efi || initrd ${base}/windows11/bootmgr bootmgr || goto failed
 initrd ${base}/windows11/winpeshl.ini winpeshl.ini || goto failed
 initrd ${base}/windows11/netboot.cmd netboot.cmd || goto failed
 initrd ${base}/windows11/sources/boot.wim boot.wim || goto failed
@@ -381,7 +381,7 @@ iseq ${platform} pcbios || goto failed
 set pe pe8.wim
 :pe
 kernel ${base}/boot/wimboot || goto failed
-initrd ${base}/windows/boot/bcd BCD || goto failed
+iseq ${platform} efi && initrd ${base}/windows/efi/microsoft/boot/bcd BCD || initrd ${base}/windows/boot/bcd BCD || goto failed
 initrd ${base}/pe/boot.sdi boot.sdi || goto failed
 initrd ${base}/pe/${pe} boot.wim || goto failed
 boot || goto failed
@@ -695,7 +695,7 @@ assert 'item win11 ' not in m and ':win11\n' not in m
 m=m.replace('item shell ', 'item win11 Windows 11 24H2 x64 - LAN or site VPN\nitem shell ',1)
 block=''' :win11
 kernel ${base}/boot/wimboot index=2 || goto failed
-initrd ${base}/windows11/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/windows11/bootmgr.efi bootmgfw.efi || initrd ${base}/windows11/bootmgr bootmgr || goto failed
 initrd ${base}/windows11/winpeshl.ini winpeshl.ini || goto failed
 initrd ${base}/windows11/netboot.cmd netboot.cmd || goto failed
 initrd ${base}/windows11/sources/boot.wim boot.wim || goto failed
