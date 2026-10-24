@@ -1,0 +1,30 @@
+name: Build Windows PXE DHCP
+
+on:
+  push:
+    paths:
+      - 'windows-pxe-dhcp/**'
+      - '.github/workflows/build-windows-pxe-dhcp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.3'
+          cache-dependency-path: windows-pxe-dhcp/go.sum
+      - name: Test and build
+        working-directory: windows-pxe-dhcp
+        shell: pwsh
+        run: ./build.ps1
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows-pxe-dhcp-amd64
+          path: windows-pxe-dhcp/dist/windows-pxe-dhcp-amd64.zip
+          if-no-files-found: error

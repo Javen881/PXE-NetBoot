@@ -12,6 +12,7 @@
 - [全部源码与配置的 Markdown 示例](docs/SOURCE-DEMO.md)：直接阅读完整实现。
 - [资源准备脚本](scripts/prepare.py)：只写入新的空目录，不操作当前运行服务。
 - [历史部署记录](history/README.md)：保留旧脚本，标明已知限制。
+- [Windows 便携 PXE DHCP](windows-pxe-dhcp/README.md)：LAN 口直连现场设备时分配地址，并按 BIOS、UEFI 和 iPXE 分流；配置保存在外部 JSON。
 
 安装介质内的 WIM、内核与系统文件由本地 ISO 提取；第三方引导程序的获取方式、版本和哈希见 Demo。
 
@@ -607,4 +608,3 @@ examples/ 是现有菜单与 Windows 启动脚本。
 当前菜单已包含 Windows 11；examples/windows11/ 是已部署的自动重试脚本。
 原 examples/netboot.cmd 对应 LTSC，不要混用。
 本仓库只保存文本配置和说明，不保存安装镜像、账号密码或激活密钥。
-

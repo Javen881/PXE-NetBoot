@@ -1,0 +1,16 @@
+{
+  "listenInterface": "Ethernet",
+  "serverIP": "192.168.50.1",
+  "subnetMask": "255.255.255.0",
+  "poolStart": "192.168.50.100",
+  "poolEnd": "192.168.50.199",
+  "router": "192.168.50.1",
+  "dnsServers": ["223.5.5.5", "1.1.1.1"],
+  "leaseTimeSeconds": 3600,
+  "tftpServer": "192.168.10.220",
+  "biosBootFile": "undionly.kpxe",
+  "uefiX64BootFile": "ipxe.efi",
+  "ipxeMenuURL": "http://192.168.10.220:8088/boot.ipxe",
+  "leaseFile": "data/leases.json",
+  "logFile": "logs/server.log"
+}

@@ -9,3 +9,6 @@ __pycache__/
 *.pyc
 .agents/
 .codex/
+windows-pxe-dhcp/config.json
+windows-pxe-dhcp/data/
+windows-pxe-dhcp/logs/
