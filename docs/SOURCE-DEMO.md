@@ -121,7 +121,7 @@ iseq ${platform} pcbios || goto pe8_unsupported
 set pe pe8.wim
 :pe
 kernel ${base}/boot/wimboot || goto failed
-iseq ${platform} efi && initrd ${base}/pe/bootmgfw.efi bootmgfw.efi || initrd ${base}/pe/bootmgr bootmgr || goto failed
+iseq ${platform} efi && initrd ${base}/pe/bootmgfw.efi bootx64.efi || initrd ${base}/pe/bootmgr bootmgr || goto failed
 iseq ${platform} efi && initrd ${base}/pe/bcd-efi BCD || initrd ${base}/pe/bcd BCD || goto failed
 initrd ${base}/pe/boot.sdi boot.sdi || goto failed
 initrd ${base}/pe/${pe} boot.wim || goto failed

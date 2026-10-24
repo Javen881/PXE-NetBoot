@@ -476,6 +476,8 @@ item 后的 win11 必须与 :win11 完全一致。
 `bootmgfw.efi` 传给 wimboot，否则会出现 `FATAL: no bootloader file found`。
 自定义 PE 应使用其原始 ISO 中同版本的 `bootmgr`、EFI 启动器、BCD 和 `boot.sdi`；不要把较新的 Windows
 安装 ISO 启动组件与旧版 PE WIM 混用。本项目的 `prepare.py` 会从 `Full.iso` 将这些文件提取到 `http/pe/`。
+手工向 wimboot 注入 UEFI 启动器时，iPXE 的目标文件名使用官方示例中的 `bootx64.efi`；源文件仍可命名为
+`bootmgfw.efi`。
 这里只修改静态菜单，无需重启 nginx、TFTP 或路由器。
 如果同时修改了首页 index.html，可更新显示列表，但首页不是实际引导菜单。
 
