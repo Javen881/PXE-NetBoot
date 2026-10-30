@@ -1,7 +1,7 @@
 # 新增 Windows 10、Windows 11 与 Linux 镜像：逐步操作指南
 
 适用于本项目已有 PXE 服务的环境。本文是扩容指南，不需要重新安装 DHCP、TFTP 或覆盖现有系统目录。
-更新日期：2026-10-24。当前用户已确认 PE10 的 UEFI 入口可用；下文新增版本示例需要逐一完成客户端安装验收。
+更新日期：2026-10-30。当前用户已确认 PE10 的 UEFI 入口可用；下文新增版本示例需要逐一完成客户端安装验收。
 
 ## 1. 原理：为什么复制 ISO 后菜单不会自动增加
 
@@ -32,6 +32,7 @@ export PXE_BACKUP="$NETBOOT_ROOT/backups/add-system-$(date +%Y%m%d-%H%M%S)"
 sudo mkdir -p "$PXE_BACKUP"
 sudo cp "$NETBOOT_ROOT/http/boot.ipxe" "$PXE_BACKUP/boot.ipxe"
 sudo cp "$NETBOOT_ROOT/config/smb.conf" "$PXE_BACKUP/smb.conf"
+sudo cp "$NETBOOT_ROOT/config/nginx.conf" "$PXE_BACKUP/nginx.conf"
 command -v 7z bsdtar wimlib-imagex curl smbclient testparm
 ```
 
@@ -52,6 +53,19 @@ sudo apt-get install 7zip libarchive-tools wimtools curl smbclient samba
 - 不要运行 `prepare.py` 覆盖现有目录；它用于创建全新的空环境。
 
 ## 3. 新增另一个 Windows 11 或 Windows 10
+
+本章完整流程仍适用于新增 Windows 版本，而不是只修改菜单名称：
+
+| 运行文件 | 新增或修改内容 |
+| --- | --- |
+| iso/新版本.iso | 放入完整介质并校验 |
+| http/新版本ID/ | 解包整份 ISO，保留本版本 sources/boot.wim 与安装源 |
+| http/新版本ID/netboot.cmd | 指向该版本独立 SMB 共享 |
+| http/新版本ID/winpeshl.ini | 自动调用网络与安装脚本 |
+| config/smb.conf | 添加独立只读共享，检查后加载 |
+| http/boot.ipxe | 添加 item 和对应标签块 |
+
+Windows 安装源使用 SMB，不需要为每个 Windows ISO 增加 Nginx alias。HTTP 根目录已覆盖新解包目录。DHCP、TFTP、路由器保持原有入口。
 
 ### 3.1 每个版本使用独立标识
 
@@ -234,61 +248,134 @@ X:\Windows\System32\netboot.cmd
 
 如果 Z: 已占用，先确认映射对象再删除错误映射；不要盲目运行 net use * /delete。
 
-## 4. 新增 Ubuntu Server / Desktop
+## 4. 新增 Ubuntu 22.04.5 LTS Desktop（按本机实际镜像）
 
-### 4.1 准备同版本内核、initrd、完整 ISO
+本次已在 ISO 目录发现 `ubuntu-22.04.5-desktop-amd64.iso`，并读取确认含有 `casper/vmlinuz` 和 `casper/initrd`。这是 **Desktop 桌面版**，不是 live-server；Ubuntu 长期支持版称为 LTS，不叫 LTSC。文件存在与目录检查不代表已完成镜像完整性校验或客户端启动验收。
 
-以下示例为 Ubuntu Server 24.04 系列的 live-server amd64 ISO。不同版本先查看 ISO 中 casper 的实际文件名：
+### 4.1 要改哪些文件
+
+| 文件或目录 | 操作 | 用途 |
+| --- | --- | --- |
+| iso/ubuntu-22.04.5-desktop-amd64.iso | 保留已下载文件 | 完整安装介质 |
+| http/ubuntu2204/vmlinuz | 从上述 ISO 提取 | Linux 内核 |
+| http/ubuntu2204/initrd | 从上述 ISO 提取 | 启动早期环境 |
+| config/nginx.conf | 新增一个 location/alias | 通过 HTTP 提供原始 ISO，不复制第二份 |
+| http/boot.ipxe | 增加 item 与标签块 | 客户端实际菜单 |
+| 仓库 examples/boot.ipxe、config/nginx.conf | 部署验收后同步对应新增内容 | 保存复现配置 |
+
+这里所有运行路径都相对于 `/home/javen03/data/netboot`。原来的 `http/ubuntu/` 和 26.04 菜单保留。
+
+**为什么 26.04 的 http/ubuntu/ 里没有 install.iso？** 因为当前 Nginx 已配置：
+
+```nginx
+location = /iso/ubuntu.iso {
+    alias /home/javen03/data/netboot/iso/ubuntu-26.04.1-desktop-amd64.iso;
+}
+```
+
+URL 与磁盘路径不必相同。22.04 延续这个方案，新增 `/iso/ubuntu2204.iso`，不要修改原来的 `/iso/ubuntu.iso`。本章不在 http/ubuntu2204 下复制 install.iso。
+
+### 4.2 检查镜像并提取启动文件
+
+先执行第 2 节公共变量与备份，再执行下面命令。命令在同一个 Bash 终端内运行，任一步失败先停止排查。
 
 ```bash
-export LINUX_ID=ubuntu-server-extra
-export LINUX_ISO="$NETBOOT_ROOT/iso/你的Ubuntu-live-server-amd64.iso"
+set -o pipefail
+export LINUX_ID=ubuntu2204
+export LINUX_ISO="$NETBOOT_ROOT/iso/ubuntu-22.04.5-desktop-amd64.iso"
 export LINUX_DIR="$NETBOOT_ROOT/http/$LINUX_ID"
+test -s "$LINUX_ISO" || { echo 'ISO 不存在或为空'; exit 1; }
 7z t "$LINUX_ISO" || exit 1
-bsdtar -tf "$LINUX_ISO" | grep '^casper/'
-test ! -e "$LINUX_DIR" || exit 1
+sha256sum "$LINUX_ISO"
+bsdtar -tf "$LINUX_ISO" | grep -E '^casper/(vmlinuz|initrd)$'
+test ! -e "$LINUX_DIR" || { echo '目录已存在，请检查已有内容，不要覆盖'; exit 1; }
 sudo mkdir -p "$LINUX_DIR"
-bsdtar -xOf "$LINUX_ISO" casper/vmlinuz | sudo tee "$LINUX_DIR/vmlinuz" >/dev/null
-bsdtar -xOf "$LINUX_ISO" casper/initrd | sudo tee "$LINUX_DIR/initrd" >/dev/null
-sudo cp "$LINUX_ISO" "$LINUX_DIR/install.iso"
+bsdtar -xOf "$LINUX_ISO" casper/vmlinuz | sudo tee "$LINUX_DIR/vmlinuz" >/dev/null || exit 1
+bsdtar -xOf "$LINUX_ISO" casper/initrd | sudo tee "$LINUX_DIR/initrd" >/dev/null || exit 1
 sudo chmod 755 "$LINUX_DIR"
-sudo chmod 644 "$LINUX_DIR/vmlinuz" "$LINUX_DIR/initrd" "$LINUX_DIR/install.iso"
-test -s "$LINUX_DIR/vmlinuz" && test -s "$LINUX_DIR/initrd"
+sudo chmod 644 "$LINUX_DIR/vmlinuz" "$LINUX_DIR/initrd"
+test -s "$LINUX_DIR/vmlinuz" && test -s "$LINUX_DIR/initrd" || exit 1
+ls -lh "$LINUX_DIR/vmlinuz" "$LINUX_DIR/initrd"
 ```
 
-复制 ISO 到 HTTP 子目录会额外占一份空间，但不需要修改 nginx alias。原 `/iso/ubuntu.iso` 在当前 nginx 中是专门指向旧 ISO 的固定 alias，不要拿它作为新版本下载地址。
+把 SHA256 与 [Ubuntu 22.04 官方 SHA256SUMS](https://releases.ubuntu.com/22.04/SHA256SUMS) 中同名文件的值核对。`7z t` 用于检查读取与归档结构，不替代官方哈希校验。不要混用 26.04 的内核、22.04 的 initrd 和另一版 ISO。
 
-### 4.2 添加菜单
+### 4.3 新增 Nginx ISO 映射
 
-在 choose 前增加：
-
-```ipxe
-item ubuntu-server-extra Ubuntu Server - additional version
+```bash
+sudo nano "$NETBOOT_ROOT/config/nginx.conf"
 ```
 
-在 :shell 前增加：
+在监听 `192.168.10.220:8088` 的 **server { ... } 内**，与原 ISO location 同级新增一次：
+
+```nginx
+location = /iso/ubuntu2204.iso {
+    alias /home/javen03/data/netboot/iso/ubuntu-22.04.5-desktop-amd64.iso;
+}
+```
+
+服务以 `javen03` 运行，需要能够穿越父目录并读取 ISO。本机下载文件已经可读；若返回 403，先检查路径权限，不要递归放开整个 home 目录。
+
+检查配置后重新加载。当前 `netboot-http` 没有定义 ExecReload，因此使用 HUP；不要只运行默认配置的 `nginx -t`：
+
+```bash
+sudo /usr/sbin/nginx -t -c "$NETBOOT_ROOT/config/nginx.conf" || exit 1
+sudo systemctl kill --kill-whom=main --signal=HUP netboot-http
+systemctl is-active netboot-http
+curl -fI "$PXE_BASE/iso/ubuntu2204.iso"
+```
+
+如果服务未启动，先查看 `systemctl status netboot-http` 和 `/var/log/netboot/error.log`。只改 boot.ipxe 不需重启；这次改了 Nginx alias，所以需要加载配置。
+
+### 4.4 添加实际 PXE 菜单
+
+```bash
+sudo nano "$NETBOOT_ROOT/http/boot.ipxe"
+```
+
+第一处，在 item 列表中、`choose` 之前增加：
 
 ```ipxe
-:ubuntu-server-extra
-kernel ${base}/ubuntu-server-extra/vmlinuz initrd=initrd.magic boot=casper ip=dhcp url=${base}/ubuntu-server-extra/install.iso cloud-config-url=/dev/null --- || goto failed
-initrd --name initrd ${base}/ubuntu-server-extra/initrd || goto failed
+item ubuntu2204 Ubuntu Desktop 22.04.5 LTS amd64
+```
+
+第二处，在 `:shell` 之前增加：
+
+```ipxe
+:ubuntu2204
+kernel ${base}/ubuntu2204/vmlinuz initrd=initrd.magic boot=casper ip=dhcp url=${base}/iso/ubuntu2204.iso cloud-init=disabled --- || goto failed
+initrd --name initrd ${base}/ubuntu2204/initrd || goto failed
 boot || goto failed
 ```
 
-本项目现有 iPXE 使用 `initrd.magic` 的内核参数和 `--name initrd` 组合；不要把 Windows 的尾部虚拟文件名参数照搬到 Linux 行。
-此入口保持交互安装，不加入 autoinstall、无人值守分区或清盘配置。
-Desktop 可按同样的 casper 流程另建目录，但须核对目标版本的网络启动参数，并为下载 ISO 和 live 环境预留足够内存。
-如果同一 ISO 在光驱可启动但 HTTP 启动失败，检查目标发行版是否支持该 live 网络安装方式，不能认为所有 Linux ISO 都支持 url=。
+`${base}` 沿用菜单顶部 `http://192.168.10.220:8088`。文件夹、item 标识与标签使用同一个 ubuntu2204，且不要重复定义标签。
+
+本项目 iPXE 使用 `initrd=initrd.magic` 与 `--name initrd` 配合；不要把 Windows 的尾部虚拟文件名参数照搬到 Linux 行。这里保持桌面版交互安装，不加入 autoinstall 或自动清盘指令；`cloud-init=disabled` 用于本例不需要 cloud-init 的桌面安装环境。
+
+### 4.5 验证与客户端安装
 
 ```bash
-curl -fI "$PXE_BASE/ubuntu-server-extra/vmlinuz"
-curl -fI "$PXE_BASE/ubuntu-server-extra/initrd"
-curl -fI "$PXE_BASE/ubuntu-server-extra/install.iso"
-curl -f -r 0-2047 -o /tmp/ubuntu-extra-range.bin "$PXE_BASE/ubuntu-server-extra/install.iso"
-wc -c /tmp/ubuntu-extra-range.bin
+curl -fI "$PXE_BASE/ubuntu2204/vmlinuz"
+curl -fI "$PXE_BASE/ubuntu2204/initrd"
+curl -fI "$PXE_BASE/iso/ubuntu2204.iso"
+curl -f -r 0-2047 -o /tmp/ubuntu2204-range.bin "$PXE_BASE/iso/ubuntu2204.iso"
+wc -c /tmp/ubuntu2204-range.bin
+curl -fsS "$PXE_BASE/boot.ipxe" | grep -A 4 '^:ubuntu2204$'
 ```
 
-Range 文件预期为 2048 字节。安装器起来后若找不到 rootfs，优先核对 ISO、内核和 initrd 是否同一版本以及 URL 是否可达。
+Range 文件预期为 2048 字节。重新从 PXE 启动，选择 Ubuntu Desktop 22.04.5，依次确认内核/initrd 下载、ISO 下载、进入桌面/安装器、完成安装、重启从磁盘进入系统。需要的固件模式分别验收；资源可访问不等于 BIOS 和 UEFI 都通过。
+
+Desktop ISO 约 4.5 GiB，HTTP live 启动还会占用下载缓冲、initrd 和桌面运行内存。建议测试机先分配 12～16 GiB，属于本方案测试建议而非 Ubuntu 官方最低配置；不足时可能下载到一半或启动桌面时失败。
+
+能下载内核却找不到介质：检查 ISO URL 与访问日志。`unknown-block(0,0)`：先检查 initrd 是否正确加载和版本是否一致。黑屏则继续区分显卡初始化与介质加载，不要直接覆盖原来的可用版本。
+
+### 4.6 若以后改加 Server 或其他 Ubuntu 版本
+
+每个版本另建目录、另加 ISO alias 和菜单标签，保留原版本。从所选 ISO 提取自己的 casper/vmlinuz、casper/initrd；镜像内文件名有变化时按实际目录调整。
+
+Live Server 可参考官方 netboot 文档，使用对应 ISO URL，并按是否需要 cloud-init/autoinstall 调整参数，例如交互安装使用 `cloud-config-url=/dev/null`；不要照搬本章 Desktop 的 cloud-init 禁用参数到需要自动安装配置的 Server 流程。不同版本需要分别验收。
+
+备选方法是把 ISO 复制为 `http/ubuntu2204/install.iso`，然后把菜单 URL 改成 `${base}/ubuntu2204/install.iso`，这样不需要新增 alias，但会额外占一份磁盘空间。两种方式选一种并保持 URL 对应，不要认为目录内必须有 install.iso。
 
 ## 5. 新增 Debian：使用官方 netboot 安装器
 
@@ -416,6 +503,14 @@ sudo testparm -s "$NETBOOT_ROOT/config/smb.conf" && \
   sudo systemctl kill --kill-whom=main --signal=HUP netboot-smb
 ```
 
+若本次新增了 Ubuntu alias，还需恢复 Nginx 配置并检查加载：
+
+```bash
+sudo cp "$PXE_BACKUP/nginx.conf" "$NETBOOT_ROOT/config/nginx.conf"
+sudo /usr/sbin/nginx -t -c "$NETBOOT_ROOT/config/nginx.conf" && \
+  sudo systemctl kill --kill-whom=main --signal=HUP netboot-http
+```
+
 新资源目录先保留供诊断，不立即删除。备份之后若还有别的已生效修改，改为只移除本次新增 item、标签块、共享段，不用整文件回滚。
 
 ## 8. 同步到 GitHub 与复现资料
@@ -430,6 +525,8 @@ sudo testparm -s "$NETBOOT_ROOT/config/smb.conf" && \
 建议每个新增版本记录：ID、ISO 名、SHA256、架构、boot.wim 索引或内核路径、安装源 URL/共享名、支持固件、已完成的安装测试。
 
 ## 9. 官方参考
+
+- [Ubuntu 22.04 casper 手册](https://manpages.ubuntu.com/manpages/jammy/man7/casper.7.html)：live 网络启动与 ISO URL 参数。
 
 - [iPXE wimboot](https://ipxe.org/wimboot)：标准 WIM 启动和附加脚本注入。
 - [Microsoft Windows Setup 命令行](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-command-line-options)：/InstallFrom 与分卷镜像。

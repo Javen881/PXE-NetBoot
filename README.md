@@ -6,7 +6,7 @@
 
 ## 新增其他系统
 
-- [新增 Windows 10、Windows 11 与 Linux：逐步操作指南](docs/ADDING-SYSTEMS.md)：独立版本目录、共享、菜单、Ubuntu/Debian/Rocky 类安装源、验证和回滚。
+- [新增 Windows 10、Windows 11 与 Linux：逐步操作指南](docs/ADDING-SYSTEMS.md)：2026-10-30 更新：按已下载的 Ubuntu 22.04.5 Desktop 演示内核提取、Nginx ISO alias、菜单和验收，同时包含新增 Windows 10/11 的独立目录、共享、启动脚本，以及其他 Linux 安装源和回滚。
 
 ## 完整部署 Demo 与源码
 
